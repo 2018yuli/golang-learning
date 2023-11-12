@@ -6,8 +6,7 @@ import (
 )
 
 // fatal error: all goroutines are asleep - deadlock!
-// channel 是 goroutinue 和 goroutinue 之间通信管道
-func channelDemo() {
+func ChannelDeadLockNoGoroutine() {
 	// var c chan int c == nil
 	// 如何创建 chan
 	c := make(chan int)
@@ -21,13 +20,13 @@ func channelDemo() {
 
 }
 
-// n= 1
 // fatal error: all goroutines are asleep - deadlock!
-func channelDemo1() {
+func ChannelDeadLockGoroutineExit() {
 	// 创建 channel
 	c := make(chan int)
 	go func() {
-		// 当 c 收完 n=1 之后，此 goroutine 退出，造成 deadlock
+		// 当 c 收完 n=1 之后
+		// 此 goroutine 退出，造成 deadlock
 		n := <-c
 		fmt.Printf("n= %v \n", n)
 	}()
@@ -39,7 +38,8 @@ func channelDemo1() {
 
 }
 
-func channelDemo2() {
+// channel 是 goroutinue 和 goroutinue 之间通信管道
+func ChannelIsGoroutine2Goroutine() {
 	// 创建 channel
 	c := make(chan int)
 	go func() {
@@ -58,5 +58,5 @@ func channelDemo2() {
 }
 
 func main() {
-	channelDemo2()
+	ChannelIsGoroutine2Goroutine()
 }
