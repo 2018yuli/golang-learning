@@ -26,6 +26,7 @@ type worker struct {
 
 func doWorker(id int, c chan int, done chan bool) {
 	for n := range c {
+		time.Sleep(1 * time.Second)
 		fmt.Printf("worker %d received data %d \n", id, n)
 	}
 }
@@ -39,33 +40,32 @@ func createWorker(i int) worker {
 	return w
 }
 
-func SelectOverviewRefactor2() {
+func SelectQueued() {
 	// select 的使用场景，我们有多个 channel
 	var c1, c2 = Generate(), Generate()
 
 	var worker = createWorker(0)
-	n := 0
-	hasValue := false
+	var queue []int
 	for i := 0; i < 50; i++ {
 		// nil channel 能正确运行，但是不会被 select 到
 		var activeWorker chan int
-		if hasValue {
+		var activeValue int
+		if len(queue) > 0 {
 			activeWorker = worker.in
+			activeValue = queue[0]
 		}
 		select {
-		case n = <-c1:
-			hasValue = true
-		case n = <-c2:
-			hasValue = true
-			// 但是，如果 c1, c2 生产数据的速度大于 activeWorker 消费数据的速度
-			// n 将会无法接收，所以此程序依旧有问题
-		case activeWorker <- n:
-			hasValue = false
+		case n := <-c1:
+			queue = append(queue, n)
+		case n := <-c2:
+			queue = append(queue, n)
+		case activeWorker <- activeValue:
+			queue = queue[1:]
 		}
 	}
 
 }
 
 func main() {
-	SelectOverviewRefactor2()
+	SelectQueued()
 }
