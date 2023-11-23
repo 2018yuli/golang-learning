@@ -64,11 +64,12 @@ func SelectOverview() {
 			// fmt.Printf("\n received value from c2 %d \n", n2)
 			w.in <- n2
 			<-w.done
-		// 加了 defalut 之后 select 将变为非阻塞
-		// default:
-		// 	fmt.Print(" ... ")
-		// 	time.Sleep(time.Duration(7*100) * time.Millisecond)
-		// }
+			// 加了 defalut 之后 select 将变为非阻塞
+			// default:
+			// 	fmt.Print(" ... ")
+			// 	time.Sleep(time.Duration(7*100) * time.Millisecond)
+			// }
+		}
 	}
 
 }
