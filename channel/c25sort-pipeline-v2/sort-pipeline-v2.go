@@ -42,16 +42,21 @@ func InMemorySort(in <-chan int) <-chan int {
 	return out
 }
 
+func Merge(in1, in2 <-chan int) <-chan int {
+	out := make(chan int)
+
+	go func() {
+		
+	}()
+
+	return out
+}
+
 func main() {
-	// 以下两步为非阻塞
-	p := ArraySource(3, 2, 6, 7, 4, 5, 1)
-	p = InMemorySort(p)
+	// 以下非阻塞
+	p := InMemorySort(ArraySource(3, 2, 6, 7, 4, 5, 1))
 	// 阻塞
-	for {
-		if num, ok := <-p; ok {
-			fmt.Printf("f=%d \r\n", num)
-		} else {
-			break
-		}
+	for v := range p {
+		fmt.Println(v)
 	}
 }
