@@ -1,27 +1,30 @@
 package main
 
 import (
-	"bufio"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"math/rand"
-	"os"
 	"sort"
 )
 
-func ReaderSource(reader io.Reader) <-chan int {
+// 分块读
+func ReaderSource(reader io.Reader, chunkSize int) <-chan int {
 	out := make(chan int)
 
 	go func() {
 		buffer := make([]byte, 8)
+		bytesRead := 0
 		for {
 			if n, err := reader.Read(buffer); err == nil {
+				bytesRead += n
 				if n > 0 {
 					v := int(binary.BigEndian.Uint64(buffer))
 					out <- v
 				}
 			} else {
+				break
+			}
+			if chunkSize != -1 && bytesRead >= chunkSize {
 				break
 			}
 		}
@@ -52,6 +55,39 @@ func RandomSource(count int) <-chan int {
 	return out
 }
 
+func Merge(in1, in2 <-chan int) <-chan int {
+	out := make(chan int)
+
+	go func() {
+		v1, ok1 := <-in1
+		v2, ok2 := <-in2
+		for ok1 || ok2 {
+			if !ok2 || (ok1 && v1 <= v2) {
+				out <- v1
+				v1, ok1 = <-in1
+			} else {
+				out <- v2
+				v2, ok2 = <-in2
+			}
+		}
+		close(out)
+	}()
+
+	return out
+}
+
+// 多路两两归并
+func MergeN(inputs ...<-chan int) <-chan int {
+	if len(inputs) == 1 {
+		return inputs[0]
+	}
+	m := len(inputs) / 2
+	// merge inputs [0..m) and inputs [m..end]
+	return Merge(
+		MergeN(inputs[:m]...),
+		MergeN(inputs[m:]...))
+}
+
 func InMemorySort(in <-chan int) <-chan int {
 	out := make(chan int)
 
@@ -74,51 +110,4 @@ func InMemorySort(in <-chan int) <-chan int {
 	}()
 
 	return out
-}
-
-func Merge(in1, in2 <-chan int) <-chan int {
-	out := make(chan int)
-
-	go func() {
-		v1, ok1 := <-in1
-		v2, ok2 := <-in2
-		for ok1 || ok2 {
-			if !ok2 || (ok1 && v1 <= v2) {
-				out <- v1
-				v1, ok1 = <-in1
-			} else {
-				out <- v2
-				v2, ok2 = <-in2
-			}
-		}
-		close(out)
-	}()
-
-	return out
-}
-
-func main() {
-	const fileName = "small.in"
-	const n = 64
-	file, err := os.Create(fileName)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	p := RandomSource(n)
-	writer := bufio.NewWriter(file)
-	WriterSink(writer, p)
-	writer.Flush()
-
-	file, err = os.Open(fileName)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-	p = ReaderSource(bufio.NewReader(file))
-	for v := range p {
-		fmt.Println(v)
-	}
-
 }
