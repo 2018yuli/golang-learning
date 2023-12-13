@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"learning/channel/c28sort-pipeline-outer/pipeline"
 	"os"
 )
 
@@ -20,10 +21,10 @@ func createPipeline(filename string, fileSize, chunkCount int) (<-chan int, []*o
 		files = append(files, file)
 		file.Seek(int64(i*chunkSize), 0)
 
-		source := ReaderSource(bufio.NewReader(file), chunkSize)
-		sortResults = append(sortResults, InMemorySort(source))
+		source := pipeline.ReaderSource(bufio.NewReader(file), chunkSize)
+		sortResults = append(sortResults, pipeline.InMemorySort(source))
 	}
-	return MergeN(sortResults...), files
+	return pipeline.MergeN(sortResults...), files
 }
 
 func writeToFile(p <-chan int, filename string) {
@@ -36,7 +37,7 @@ func writeToFile(p <-chan int, filename string) {
 	// defer 栈中，flush 比 file.Close 先执行
 	defer writer.Flush()
 
-	WriterSink(writer, p)
+	pipeline.WriterSink(writer, p)
 }
 
 func printFile(filename string) {
@@ -46,7 +47,7 @@ func printFile(filename string) {
 	}
 	defer file.Close()
 
-	p := ReaderSource(file, -1)
+	p := pipeline.ReaderSource(file, -1)
 	for v := range p {
 		fmt.Println(v)
 	}
