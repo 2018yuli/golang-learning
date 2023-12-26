@@ -6,15 +6,23 @@ import (
 	"time"
 )
 
-// 独立的消息生成器（服务、任务、组件）
-func msgGen(name string) <-chan string {
+// 独立的消息生成器（服务、任务、组件）done 用于服务中断
+func msgGen(name string, done chan struct{}) <-chan string {
 	c := make(chan string)
 
 	go func() {
 		i := 0
 		for {
-			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
-			c <- fmt.Sprintf("%v generate message %d", name, i)
+			select {
+			case <-time.After(time.Duration(rand.Intn(2000)) * time.Millisecond):
+				c <- fmt.Sprintf("%v generate message %d", name, i)
+			case <-done:
+				fmt.Println("cleaning up")
+				time.Sleep(2 * time.Second)
+				fmt.Println("cleanup done")
+				done <- struct{}{}
+				return
+			}
 			i++
 		}
 	}()
@@ -42,8 +50,9 @@ func timeoutWait(c <-chan string, timeout time.Duration) (string, bool) {
 
 func main() {
 	// 类似于 c 语言中服务的句柄 handle
-	m1 := msgGen("service1")
-	m2 := msgGen("service2")
+	done := make(chan struct{})
+	m1 := msgGen("service1", done)
+	m2 := msgGen("service2", done)
 	for i := 0; i < 10; i++ {
 		fmt.Printf("m1 = %v \n", <-m1)
 		if m, ok := nonBlockWait(m2); ok {
@@ -53,13 +62,16 @@ func main() {
 		}
 	}
 
-	m3 := msgGen("service3")
+	m3 := msgGen("service3", done)
 	for i := 0; i < 10; i++ {
 		if m, ok := timeoutWait(m3, 1*time.Second); ok {
 			fmt.Printf("m3 = %v \n", m)
 		} else {
-			fmt.Printf("time out service3")
+			fmt.Printf("time out service3\n")
 		}
 	}
-
+	done <- struct{}{}
+	// time.Sleep(time.Second)
+	// 优雅退出
+	<-done
 }
